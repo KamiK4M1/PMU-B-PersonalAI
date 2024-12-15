@@ -42,7 +42,7 @@ Exercise and Workshop : [Code2Vec to detect code clone](https://github.com/KamiK
 ## Chapter IV: BiTNet: AI for diagnosing ultrasound image 
 โดยเนื้อหาจะเกี่ยวกับการตรวจบริเวณช่องท้องว่ามีสิ่งผิดปกติหรือไม่ ด้วยการใช้ ultrasound ที่ใช้มุมแตกต่างกันออกไป
 
- Exercise and Workshop :fast_forward: [EffcientNet: Image Classificaiton](https://github.com/KamiK4M1/PMU-B-PersonalAI/blob/main/BiTNet%20AI%20for%20diagnosing/PMUB_Personal_AI_Image_classification_EfficientNetB5.ipynb)
+ Exercise and Workshop : [EffcientNet: Image Classificaiton](https://github.com/KamiK4M1/PMU-B-PersonalAI/blob/main/BiTNet%20AI%20for%20diagnosing/PMUB_Personal_AI_Image_classification_EfficientNetB5.ipynb)
 
 จากการทำ Exercise พบว่ารูปภาพสุนัขและแมวจะทำนายได้ดี ในขณะที่ภาพนก เครื่องบินและอื่นๆก็ยังทำนายเป็นสุนัขและแมวเช่นกันเนื่องจากเราสอนให้รู้จักแต่สุนัขและแมว และได้พบว่าค่าใดคือค่า Output ของการทำโมเดล
 
