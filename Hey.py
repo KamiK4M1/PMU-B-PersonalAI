@@ -1,69 +1,44 @@
 import torch
 import torch.nn as nn
 
-class NUInceptionBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super().__init__()
-        mid = out_channels // 4
+class MobileNetV1(nn.Module):
+    def __init__(self, num_classes=1000):
+        super(MobileNetV1, self).__init__()
 
-        self.branch1 = nn.Sequential(
-            nn.Conv2d(in_channels, mid, kernel_size=1), nn.BatchNorm2d(mid), nn.ReLU()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(32),
+
+            DepthWiseSeperable(32, 64, 1),
+            DepthWiseSeperable(64, 128, 2),
+            DepthWiseSeperable(128, 128, 1),
+            DepthWiseSeperable(128, 256, 2),
+            DepthWiseSeperable(256, 256, 1),
+            DepthWiseSeperable(256, 512, 2),
+            DepthWiseSeperable(512, 512, 1),
+            DepthWiseSeperable(512, 512, 1),
+            DepthWiseSeperable(512, 512, 1),
+            DepthWiseSeperable(512, 512, 1),
+            DepthWiseSeperable(512, 512, 1),
+            DepthWiseSeperable(512, 1024, 2),
+            DepthWiseSeperable(1024, 1024, 1)
         )
 
-        self.branch2 = nn.Sequential(
-            nn.Conv2d(in_channels, mid, kernel_size=(1, 3), padding=(0, 1)),
-            nn.Conv2d(mid, mid, kernel_size=(3, 1), padding=(1, 0)),
-            nn.BatchNorm2d(mid), nn.ReLU()
-        )
-
-        self.branch3 = nn.Sequential(
-            nn.Conv2d(in_channels, mid, kernel_size=(3, 1), padding=(1, 0)),
-            nn.Conv2d(mid, mid, kernel_size=(1, 3), padding=(0, 1)),
-            nn.BatchNorm2d(mid), nn.ReLU()
-        )
-
-        self.branch4 = nn.Sequential(
-            nn.MaxPool2d(3, stride=1, padding=1),
-            nn.Conv2d(in_channels, mid, kernel_size=1),
-            nn.BatchNorm2d(mid), nn.ReLU()
-        )
-
-    def forward(self, x):
-        return torch.cat([
-            self.branch1(x),
-            self.branch2(x),
-            self.branch3(x),
-            self.branch4(x)
-        ], dim=1)
-
-class NUInNetMultiTask(nn.Module):
-    def __init__(self, num_classes):
-        super().__init__()
-        self.stem = nn.Sequential(
-            nn.Conv2d(3, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU()
-        )
-
-        self.block1 = NUInceptionBlock(32, 64)
-        self.block2 = NUInceptionBlock(64, 128)
-
-        self.global_pool = nn.AdaptiveAvgPool2d(1)
-
-        self.shared_fc = nn.Linear(128, 64)  # Shared layer
-
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
+        self.shared_fc = nn.Linear(1024, 64)
         self.classifier = nn.Linear(64, num_classes)
-        self.regressor = nn.Linear(64, 1)  # Regression 0–100
+        self.regressor = nn.Linear(64, 1)
 
     def forward(self, x):
-        x = self.stem(x)
-        x = self.block1(x)
-        x = self.block2(x)
-        x = self.global_pool(x)
+        x = self.features(x)
+        x = self.avgpool(x)
         x = x.view(x.size(0), -1)
 
         x = nn.functional.relu(self.shared_fc(x))
 
         cls_logits = self.classifier(x)
-        reg_score = torch.clamp(self.regressor(x).squeeze(1), 0, 100)  # Clamp to [0, 100]
+        reg_score = self.regressor(x).squeeze(1)  # if your targets are already 0–100 float
 
         return cls_logits, reg_score
 
@@ -219,3 +194,32 @@ for epoch in range(num_epochs):
 print(f"คาดว่าเป็นเมนู: {class_names[class_idx]}")
 print(f"ให้คะแนน: {score:.2f} / 100")
     print(f"Epoch {epoch+1}: Loss={train_loss:.4f} | F1={f1:.4f} | R2={r2:.4f}")
+
+
+from torchvision import transforms
+
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.5]*3, [0.5]*3)  # ปรับตามที่ใช้เทรน
+])
+
+pred_classes = []
+pred_scores = []
+
+model.eval()
+with torch.no_grad():
+    for img_path in df["image_path"]:
+        img = Image.open(img_path).convert("RGB")
+        img = transform(img).unsqueeze(0).to(device)
+
+        cls_logits, reg_score = model(img)
+
+        class_idx = torch.argmax(cls_logits, dim=1).item()
+        score = reg_score.item() * 100  # เพราะโมเดล clamp ไว้ 0–1
+
+        pred_classes.append(class_idx)
+        pred_scores.append(score)
+
+df["pred_class"] = pred_classes
+df["pred_score"] = pred_scores
