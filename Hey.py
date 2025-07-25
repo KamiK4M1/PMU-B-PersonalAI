@@ -213,5 +213,9 @@ for epoch in range(num_epochs):
     if f1 > best_f1:
         best_f1 = f1
         torch.save(model.state_dict(), 'best_model.pt')
-    
+
+    class_names = ['ข้าวผัด', 'ต้มยำ', 'ผัดไทย', ...]  # 50 รายการ
+
+print(f"คาดว่าเป็นเมนู: {class_names[class_idx]}")
+print(f"ให้คะแนน: {score:.2f} / 100")
     print(f"Epoch {epoch+1}: Loss={train_loss:.4f} | F1={f1:.4f} | R2={r2:.4f}")
